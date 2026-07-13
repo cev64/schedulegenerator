@@ -1,0 +1,2242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="SLUH '22 Fantasy Football random schedule generator and comparison dashboard." />
+  <title>SLUH ’22 Schedule Lab</title>
+  <style>
+    :root {
+      --navy-950: #071326;
+      --navy-900: #0b1c34;
+      --navy-800: #102a4c;
+      --navy-700: #173d6b;
+      --green-500: #31c96b;
+      --green-400: #54dc84;
+      --sky-400: #60a5fa;
+      --gold-400: #f8c64e;
+      --red-400: #fb7185;
+      --ink-100: #f7fafc;
+      --ink-200: #dbe7f5;
+      --ink-300: #aebfd4;
+      --ink-500: #70849d;
+      --panel: rgba(14, 35, 62, 0.84);
+      --panel-solid: #10253f;
+      --panel-light: rgba(255, 255, 255, 0.055);
+      --border: rgba(174, 191, 212, 0.17);
+      --shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+      --radius-lg: 22px;
+      --radius-md: 14px;
+      --radius-sm: 10px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink-100);
+      background:
+        radial-gradient(circle at 8% 8%, rgba(49, 201, 107, 0.16), transparent 26rem),
+        radial-gradient(circle at 92% 4%, rgba(96, 165, 250, 0.18), transparent 28rem),
+        linear-gradient(145deg, var(--navy-950) 0%, #0b1a2d 45%, #07111f 100%);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button, input, select { font: inherit; }
+
+    button { cursor: pointer; }
+
+    a { color: inherit; }
+
+    .app-shell {
+      width: min(1600px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 48px;
+    }
+
+    .hero {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 26px 28px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: linear-gradient(135deg, rgba(16, 42, 76, 0.93), rgba(9, 25, 44, 0.88));
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .hero::after {
+      content: "";
+      width: 280px;
+      height: 280px;
+      border-radius: 50%;
+      position: absolute;
+      right: -90px;
+      top: -130px;
+      background: rgba(49, 201, 107, 0.12);
+      filter: blur(2px);
+      pointer-events: none;
+    }
+
+    .brand-row {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .brand-mark {
+      width: 56px;
+      height: 64px;
+      display: grid;
+      place-items: center;
+      border: 3px solid rgba(255,255,255,.9);
+      border-radius: 18px 18px 24px 24px;
+      background: linear-gradient(150deg, var(--green-400), #20a955);
+      color: var(--navy-950);
+      font-size: 29px;
+      font-weight: 900;
+      box-shadow: inset 0 0 0 5px var(--navy-900), 0 12px 32px rgba(0,0,0,.24);
+    }
+
+    .eyebrow {
+      margin: 0 0 4px;
+      color: var(--green-400);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 48px);
+      line-height: 1.02;
+      letter-spacing: -0.04em;
+    }
+
+    .hero-copy {
+      max-width: 800px;
+      margin: 14px 0 0 71px;
+      color: var(--ink-300);
+      font-size: 15px;
+      line-height: 1.55;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      position: relative;
+      z-index: 1;
+    }
+
+    .btn {
+      min-height: 42px;
+      border: 1px solid transparent;
+      border-radius: 11px;
+      padding: 10px 15px;
+      font-weight: 750;
+      color: var(--ink-100);
+      background: rgba(255,255,255,.08);
+      transition: transform .16s ease, border-color .16s ease, background .16s ease, opacity .16s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-decoration: none;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .btn:hover { transform: translateY(-1px); border-color: rgba(255,255,255,.22); }
+    .btn:active { transform: translateY(0); }
+    .btn:disabled { cursor: not-allowed; opacity: .55; transform: none; }
+    .btn-primary { color: #061327; background: linear-gradient(135deg, var(--green-400), var(--green-500)); box-shadow: 0 10px 28px rgba(49,201,107,.24); }
+    .btn-primary:hover { border-color: rgba(255,255,255,.5); background: linear-gradient(135deg, #6ce798, #37cf72); }
+    .btn-blue { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    .btn-danger { background: rgba(251,113,133,.12); color: #fecdd3; border-color: rgba(251,113,133,.25); }
+    .btn-ghost { background: transparent; border-color: var(--border); color: var(--ink-200); }
+    .btn-small { min-height: 34px; padding: 7px 10px; font-size: 12px; border-radius: 9px; }
+
+    .control-panel {
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 16px;
+      padding: 18px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 16px 48px rgba(0,0,0,.18);
+      backdrop-filter: blur(16px);
+    }
+
+    .control-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(150px, 220px)) minmax(270px, 1fr);
+      align-items: end;
+      gap: 14px;
+    }
+
+    .field label {
+      display: block;
+      margin: 0 0 7px;
+      color: var(--ink-300);
+      font-size: 12px;
+      font-weight: 750;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      min-height: 43px;
+      color: var(--ink-100);
+      background: #091b31;
+      border: 1px solid rgba(174,191,212,.22);
+      border-radius: 10px;
+      padding: 9px 12px;
+      outline: none;
+    }
+
+    .field input:focus,
+    .field select:focus { border-color: var(--green-400); box-shadow: 0 0 0 3px rgba(49,201,107,.12); }
+
+    .rule-pills {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      min-height: 43px;
+    }
+
+    .pill {
+      border: 1px solid rgba(84,220,132,.23);
+      background: rgba(49,201,107,.09);
+      color: #a7f3c3;
+      border-radius: 999px;
+      padding: 7px 10px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .control-actions {
+      display: flex;
+      align-items: end;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .summary-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .metric-card {
+      padding: 15px 17px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: rgba(14,35,62,.66);
+    }
+
+    .metric-label { color: var(--ink-500); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .metric-value { margin-top: 5px; font-size: 24px; font-weight: 850; letter-spacing: -.03em; }
+    .metric-note { margin-top: 2px; color: var(--ink-300); font-size: 12px; }
+
+    .workspace {
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: 330px minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .sidebar,
+    .main-panel {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--panel);
+      box-shadow: 0 18px 50px rgba(0,0,0,.2);
+      backdrop-filter: blur(16px);
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 14px;
+      max-height: calc(100vh - 28px);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 17px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel-heading h2 { margin: 0; font-size: 16px; }
+    .panel-heading span { color: var(--ink-500); font-size: 12px; }
+
+    .schedule-list {
+      padding: 10px;
+      overflow: auto;
+    }
+
+    .schedule-card {
+      width: 100%;
+      text-align: left;
+      color: var(--ink-100);
+      background: rgba(255,255,255,.025);
+      border: 1px solid transparent;
+      border-radius: 13px;
+      padding: 12px;
+      margin-bottom: 8px;
+      transition: border-color .16s ease, background .16s ease, transform .16s ease;
+    }
+
+    .schedule-card:hover { background: rgba(255,255,255,.055); border-color: var(--border); transform: translateY(-1px); }
+    .schedule-card.active { border-color: rgba(84,220,132,.52); background: rgba(49,201,107,.09); box-shadow: inset 3px 0 0 var(--green-400); }
+
+    .schedule-card-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .schedule-name { font-weight: 820; }
+    .schedule-seed { color: var(--ink-500); font-size: 11px; }
+    .status-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--green-400); box-shadow: 0 0 0 4px rgba(49,201,107,.12); }
+
+    .schedule-mini-metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+      margin-top: 10px;
+    }
+
+    .mini-metric {
+      padding: 7px 8px;
+      background: rgba(5,15,29,.32);
+      border-radius: 8px;
+      color: var(--ink-300);
+      font-size: 11px;
+    }
+
+    .mini-metric strong { display: block; color: var(--ink-100); font-size: 13px; margin-bottom: 1px; }
+
+    .card-actions { display: flex; gap: 6px; margin-top: 10px; }
+
+    .sidebar-footer {
+      padding: 12px;
+      border-top: 1px solid var(--border);
+      display: grid;
+      gap: 8px;
+    }
+
+    .main-panel { min-width: 0; overflow: hidden; }
+
+    .tabbar {
+      display: flex;
+      gap: 5px;
+      padding: 11px;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      background: rgba(5,15,29,.18);
+    }
+
+    .tab-btn {
+      min-height: 38px;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      padding: 8px 13px;
+      color: var(--ink-300);
+      background: transparent;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+
+    .tab-btn:hover { color: var(--ink-100); background: rgba(255,255,255,.04); }
+    .tab-btn.active { color: #061327; background: var(--green-400); }
+
+    .tab-content { display: none; padding: 18px; }
+    .tab-content.active { display: block; }
+
+    .section-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 15px;
+    }
+
+    .section-top h2 { margin: 0 0 4px; font-size: 22px; letter-spacing: -.025em; }
+    .section-top p { margin: 0; color: var(--ink-300); font-size: 13px; line-height: 1.45; }
+
+    .segmented {
+      display: inline-flex;
+      padding: 3px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: rgba(5,15,29,.32);
+    }
+
+    .segment-btn {
+      border: 0;
+      border-radius: 7px;
+      padding: 7px 10px;
+      background: transparent;
+      color: var(--ink-300);
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    .segment-btn.active { background: rgba(255,255,255,.1); color: var(--ink-100); }
+
+    .table-wrap {
+      max-width: 100%;
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(5,15,29,.25);
+    }
+
+    table { border-collapse: separate; border-spacing: 0; width: 100%; }
+
+    th, td {
+      border-right: 1px solid rgba(174,191,212,.11);
+      border-bottom: 1px solid rgba(174,191,212,.11);
+      padding: 9px 10px;
+      text-align: center;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    th:last-child, td:last-child { border-right: 0; }
+    tr:last-child td { border-bottom: 0; }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 3;
+      color: var(--ink-100);
+      background: #17395f;
+      font-weight: 800;
+    }
+
+    .sticky-col {
+      position: sticky;
+      left: 0;
+      z-index: 2;
+      background: #112e4e;
+      font-weight: 850;
+    }
+
+    th.sticky-col { z-index: 5; }
+
+    .opponent-cell {
+      min-width: 150px;
+      font-weight: 800;
+      color: white;
+      text-shadow: 0 1px 3px rgba(0,0,0,.35);
+    }
+
+    .week-one td { box-shadow: inset 0 2px 0 rgba(96,165,250,.75), inset 0 -2px 0 rgba(96,165,250,.35); }
+    .rivalry-row td { box-shadow: inset 0 2px 0 rgba(248,198,78,.85), inset 0 -2px 0 rgba(248,198,78,.55); }
+    .rivalry-row .sticky-col { color: #ffe39a; }
+
+    .weekly-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(280px, 1fr));
+      gap: 12px;
+    }
+
+    .week-card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(5,15,29,.24);
+      overflow: hidden;
+    }
+
+    .week-card.rivalry { border-color: rgba(248,198,78,.44); }
+
+    .week-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      background: rgba(255,255,255,.035);
+      border-bottom: 1px solid var(--border);
+      font-weight: 850;
+    }
+
+    .week-label { color: var(--ink-100); }
+    .week-type { color: var(--ink-500); font-size: 11px; font-weight: 750; }
+
+    .matchup-line {
+      display: grid;
+      grid-template-columns: minmax(0,1fr) auto minmax(0,1fr);
+      gap: 8px;
+      align-items: center;
+      padding: 8px 10px;
+      border-bottom: 1px solid rgba(174,191,212,.08);
+    }
+
+    .matchup-line:last-child { border-bottom: 0; }
+    .vs { color: var(--ink-500); font-size: 10px; font-weight: 900; }
+    .team-chip { display: block; padding: 7px 8px; border-radius: 8px; font-size: 11px; font-weight: 850; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .compare-controls {
+      display: grid;
+      grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto;
+      gap: 10px;
+      align-items: end;
+      margin-bottom: 14px;
+    }
+
+    .compare-stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      gap: 10px;
+      margin: 14px 0;
+    }
+
+    .compare-cell.same { background: rgba(49,201,107,.12); color: #b6f3ca; }
+    .compare-cell.changed { background: rgba(248,198,78,.08); }
+    .compare-arrow { color: var(--gold-400); margin: 0 5px; font-weight: 900; }
+    .compare-badge { display: inline-block; border-radius: 7px; padding: 5px 7px; color: #fff; font-size: 10px; font-weight: 850; text-shadow: 0 1px 2px rgba(0,0,0,.35); }
+
+    .similarity-cell { font-weight: 850; }
+    .similarity-high { background: rgba(49,201,107,.2); color: #b6f3ca; }
+    .similarity-mid { background: rgba(96,165,250,.15); color: #bfdbfe; }
+    .similarity-low { background: rgba(248,198,78,.14); color: #fde7a7; }
+    .similarity-self { background: rgba(255,255,255,.07); color: var(--ink-500); }
+
+    .rules-grid {
+      display: grid;
+      grid-template-columns: 1.15fr .85fr;
+      gap: 14px;
+    }
+
+    .info-card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(5,15,29,.24);
+      padding: 15px;
+    }
+
+    .info-card h3 { margin: 0 0 12px; font-size: 15px; }
+    .rule-list { display: grid; gap: 9px; }
+    .rule-item { display: grid; grid-template-columns: 30px 1fr; gap: 10px; color: var(--ink-300); font-size: 13px; line-height: 1.45; }
+    .rule-num { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 9px; background: rgba(49,201,107,.1); color: var(--green-400); font-weight: 850; }
+
+    .division-list { display: grid; gap: 12px; }
+    .division-title { color: var(--ink-300); font-size: 11px; font-weight: 850; text-transform: uppercase; letter-spacing: .09em; margin-bottom: 7px; }
+    .division-teams { display: flex; flex-wrap: wrap; gap: 7px; }
+
+    .standings-panel {
+      margin-top: 16px;
+      padding: 18px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: rgba(14,35,62,.78);
+      box-shadow: 0 16px 48px rgba(0,0,0,.16);
+    }
+
+    .standings-panel[hidden] { display: none !important; }
+    .standings-editor-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; margin-top: 14px; }
+    .standings-division-card { border: 1px solid var(--border); border-radius: 14px; background: rgba(5,15,29,.25); padding: 14px; }
+    .standing-row { display: grid; grid-template-columns: 38px minmax(0,1fr); gap: 9px; align-items: center; margin-top: 8px; }
+    .place-badge { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 9px; background: rgba(49,201,107,.1); color: var(--green-400); font-weight: 850; }
+    .standing-row select, .standings-year-input { width: 100%; min-height: 40px; color: var(--ink-100); background: #091b31; border: 1px solid rgba(174,191,212,.22); border-radius: 9px; padding: 8px 10px; outline: none; }
+    .standing-row select:focus, .standings-year-input:focus { border-color: var(--green-400); box-shadow: 0 0 0 3px rgba(49,201,107,.12); }
+    .standings-toolbar { display: flex; align-items: end; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+    .standings-toolbar-actions { display: flex; gap: 9px; flex-wrap: wrap; }
+    .crossover-preview { margin-top: 14px; padding: 13px; border: 1px solid var(--border); border-radius: 12px; background: rgba(255,255,255,.035); }
+    .crossover-grid { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 8px; margin-top: 9px; }
+    .crossover-card { padding: 9px; border-radius: 10px; background: rgba(96,165,250,.08); color: var(--ink-300); font-size: 11px; line-height: 1.35; text-align: center; }
+    .crossover-card strong { display: block; color: var(--ink-100); margin-bottom: 3px; }
+
+    .validation-list { display: grid; gap: 7px; }
+    .validation-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 10px; border-radius: 9px; background: rgba(255,255,255,.035); color: var(--ink-300); font-size: 12px; }
+    .pass { color: #8ff0b1; font-weight: 850; }
+
+    .empty-state { padding: 48px 20px; text-align: center; color: var(--ink-300); }
+
+    .toast {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      z-index: 100;
+      max-width: min(420px, calc(100% - 44px));
+      padding: 13px 15px;
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 12px;
+      background: #0d2947;
+      box-shadow: 0 18px 50px rgba(0,0,0,.35);
+      color: var(--ink-100);
+      transform: translateY(24px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s ease, transform .2s ease;
+    }
+
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.error { background: #4a1823; }
+
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      display: none;
+      place-items: center;
+      background: rgba(3,10,20,.74);
+      backdrop-filter: blur(5px);
+    }
+
+    .loading-overlay.show { display: grid; }
+    .loading-card { padding: 22px 25px; border-radius: 15px; border: 1px solid var(--border); background: #0d2947; text-align: center; box-shadow: var(--shadow); }
+    .spinner { width: 34px; height: 34px; margin: 0 auto 12px; border: 3px solid rgba(255,255,255,.16); border-top-color: var(--green-400); border-radius: 50%; animation: spin .75s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    footer { padding: 24px 4px 0; color: var(--ink-500); font-size: 12px; text-align: center; }
+
+    @media (max-width: 1180px) {
+      .workspace { grid-template-columns: 280px minmax(0,1fr); }
+      .control-grid { grid-template-columns: repeat(2, minmax(150px, 1fr)); }
+      .control-panel { grid-template-columns: 1fr; }
+      .control-actions { justify-content: flex-start; }
+    }
+
+    @media (max-width: 900px) {
+      .hero { flex-direction: column; }
+      .hero-actions { justify-content: flex-start; }
+      .hero-copy { margin-left: 0; }
+      .workspace { grid-template-columns: 1fr; }
+      .sidebar { position: static; max-height: none; }
+      .schedule-list { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); max-height: 420px; }
+      .summary-strip, .compare-stats { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .rules-grid { grid-template-columns: 1fr; }
+      .standings-editor-grid { grid-template-columns: 1fr; }
+      .crossover-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    }
+
+    @media (max-width: 650px) {
+      .app-shell { width: min(100% - 18px, 1600px); padding-top: 10px; }
+      .hero { padding: 20px; }
+      .brand-mark { width: 47px; height: 55px; font-size: 24px; }
+      .control-grid { grid-template-columns: 1fr; }
+      .schedule-list { grid-template-columns: 1fr; }
+      .weekly-grid { grid-template-columns: 1fr; }
+      .compare-controls { grid-template-columns: 1fr; }
+      .section-top { flex-direction: column; }
+      .summary-strip, .compare-stats { grid-template-columns: 1fr 1fr; }
+      .tab-content { padding: 12px; }
+      .crossover-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="hero">
+      <div>
+        <div class="brand-row">
+          <div class="brand-mark">◆</div>
+          <div>
+            <p class="eyebrow">SLUH ’22 Fantasy Football</p>
+            <h1>Schedule Lab</h1>
+          </div>
+        </div>
+        <p class="hero-copy">
+          Generate several rule-compliant 14-week schedules, compare them team by team, and export polished color-coded Excel workbooks directly from the browser.
+        </p>
+      </div>
+      <div class="hero-actions">
+        <a class="btn btn-ghost" href="https://docs.google.com/document/d/1deryDfBUafrWHRprX2v3ywPikEudSMVtCRRkJaxdNx4/edit?usp=drivesdk" target="_blank" rel="noopener">Open bylaws</a>
+        <button class="btn btn-primary" id="heroGenerateBtn">Generate schedules</button>
+      </div>
+    </header>
+
+    <section class="control-panel" aria-label="Schedule generation controls">
+      <div class="control-grid">
+        <div class="field">
+          <label for="scheduleCount">Number of schedules</label>
+          <select id="scheduleCount">
+            <option value="2">2 schedules</option>
+            <option value="3">3 schedules</option>
+            <option value="4" selected>4 schedules</option>
+            <option value="5">5 schedules</option>
+            <option value="6">6 schedules</option>
+            <option value="8">8 schedules</option>
+            <option value="10">10 schedules</option>
+            <option value="12">12 schedules</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="seedInput">Base seed</label>
+          <input id="seedInput" type="number" min="1" step="1" value="734921" />
+        </div>
+        <div class="field">
+          <label>Randomization</label>
+          <button class="btn btn-blue" id="randomSeedBtn" style="width:100%">Use random seed</button>
+        </div>
+        <div class="field">
+          <label>Rules always enforced</label>
+          <div class="rule-pills">
+            <span class="pill">Week 14 rivalries locked</span>
+            <span class="pill">Ted vs. Charlie Week 1</span>
+            <span class="pill">No back-to-back repeats</span>
+            <span class="pill">Max 2 cross-division in a row</span>
+            <span class="pill">Max 3 divisional in a row</span>
+            <span class="pill">Bylaw matchup counts</span>
+          </div>
+        </div>
+      </div>
+      <div class="control-actions">
+        <button class="btn btn-ghost" id="editStandingsBtn">Edit prior standings</button>
+        <button class="btn btn-primary" id="generateBtn">Generate</button>
+        <button class="btn btn-ghost" id="combinedDownloadBtn">Combined Excel</button>
+        <button class="btn btn-ghost" id="zipDownloadBtn">All Excel files (.zip)</button>
+      </div>
+    </section>
+
+    <section class="standings-panel" id="standingsPanel" hidden aria-label="Previous year standings editor">
+      <div class="standings-toolbar">
+        <div>
+          <p class="eyebrow">Reusable season settings</p>
+          <h2 style="margin:0 0 5px">Previous-year divisional standings</h2>
+          <p style="margin:0;color:var(--ink-300);font-size:13px">These positions determine the five extra same-place crossover games. Changes are saved in this browser for future seasons.</p>
+        </div>
+        <div class="standings-toolbar-actions">
+          <div class="field" style="min-width:150px">
+            <label for="standingsYearInput">Standings season</label>
+            <input class="standings-year-input" id="standingsYearInput" type="text" maxlength="20" value="2025" />
+          </div>
+          <button class="btn btn-ghost" id="resetStandingsBtn">Restore 2025 defaults</button>
+          <button class="btn btn-primary" id="applyStandingsBtn">Apply & regenerate</button>
+        </div>
+      </div>
+      <div class="standings-editor-grid" id="standingsEditor"></div>
+      <div class="crossover-preview">
+        <div class="division-title" style="margin:0">Extra same-place crossover matchups</div>
+        <div class="crossover-grid" id="crossoverPreview"></div>
+      </div>
+    </section>
+
+    <section class="summary-strip" id="summaryStrip"></section>
+
+    <div class="workspace">
+      <aside class="sidebar">
+        <div class="panel-heading">
+          <div>
+            <h2>Generated schedules</h2>
+            <span id="scheduleListSubtitle">Choose a schedule to inspect</span>
+          </div>
+        </div>
+        <div class="schedule-list" id="scheduleList"></div>
+        <div class="sidebar-footer">
+          <button class="btn btn-primary" id="downloadActiveBtn">Download selected Excel</button>
+          <button class="btn btn-danger" id="regenerateActiveBtn">Replace selected schedule</button>
+        </div>
+      </aside>
+
+      <main class="main-panel">
+        <nav class="tabbar" aria-label="Schedule dashboard sections">
+          <button class="tab-btn active" data-tab="scheduleTab">Selected schedule</button>
+          <button class="tab-btn" data-tab="compareTab">Compare two</button>
+          <button class="tab-btn" data-tab="similarityTab">All-schedule matrix</button>
+          <button class="tab-btn" data-tab="rulesTab">Rules & validation</button>
+        </nav>
+
+        <section id="scheduleTab" class="tab-content active"></section>
+        <section id="compareTab" class="tab-content"></section>
+        <section id="similarityTab" class="tab-content"></section>
+        <section id="rulesTab" class="tab-content"></section>
+      </main>
+    </div>
+
+    <footer>
+      Static, browser-based app designed for GitHub Pages. Schedule generation happens locally on the device; no league data is uploaded.
+    </footer>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-card">
+      <div class="spinner"></div>
+      <strong id="loadingText">Building files…</strong>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script>
+    "use strict";
+
+    const TEAM_DATA = [
+      { name: "Ted Williams", division: "Xavier", color: "#1F4E78", place: 1 },
+      { name: "Charlie Vonderheid", division: "Xavier", color: "#C00000", place: 2 },
+      { name: "Niko Nadraeu", division: "Xavier", color: "#548235", place: 3 },
+      { name: "JP Torack", division: "Xavier", color: "#7030A0", place: 4 },
+      { name: "Ian Farroll", division: "Xavier", color: "#BF9000", place: 5 },
+      { name: "Matt Windler", division: "Ignatius", color: "#5B9BD5", place: 1 },
+      { name: "Nathan Rich", division: "Ignatius", color: "#00A6A6", place: 2 },
+      { name: "Matthew Kluba", division: "Ignatius", color: "#F4B183", place: 3 },
+      { name: "Grant Thornberry", division: "Ignatius", color: "#7F7F7F", place: 4 },
+      { name: "Jared Thornberry", division: "Ignatius", color: "#D65DB1", place: 5 }
+    ];
+
+    const TEAMS = TEAM_DATA.map(team => team.name);
+    const TEAM_META = Object.fromEntries(TEAM_DATA.map(team => [team.name, team]));
+    const TEAM_INDEX = Object.fromEntries(TEAMS.map((team, index) => [team, index]));
+    const SOURCE_URL = "https://docs.google.com/document/d/1deryDfBUafrWHRprX2v3ywPikEudSMVtCRRkJaxdNx4/edit?usp=drivesdk";
+
+    const RIVALRIES = [
+      ["Matt Windler", "Jared Thornberry"],
+      ["Ted Williams", "Ian Farroll"],
+      ["Charlie Vonderheid", "Niko Nadraeu"],
+      ["Matthew Kluba", "Nathan Rich"],
+      ["Grant Thornberry", "JP Torack"]
+    ];
+
+    const WEEK_ONE_LOCK = ["Ted Williams", "Charlie Vonderheid"];
+    const DEFAULT_STANDINGS = {
+      yearLabel: "2025",
+      Xavier: ["Ted Williams", "Charlie Vonderheid", "Niko Nadraeu", "JP Torack", "Ian Farroll"],
+      Ignatius: ["Matt Windler", "Nathan Rich", "Matthew Kluba", "Grant Thornberry", "Jared Thornberry"]
+    };
+    const STANDINGS_STORAGE_KEY = "sluhScheduleLabStandingsV2";
+    const MAX_CROSS_DIVISION_STREAK = 2;
+    const MAX_DIVISIONAL_STREAK = 3;
+
+    function pairKey(a, b) {
+      return a < b ? `${a}|||${b}` : `${b}|||${a}`;
+    }
+
+    function divisionTeams(division) {
+      return TEAM_DATA.filter(team => team.division === division).map(team => team.name);
+    }
+
+    function validStandings(value) {
+      if (!value || !Array.isArray(value.Xavier) || !Array.isArray(value.Ignatius)) return false;
+      return ["Xavier", "Ignatius"].every(division => {
+        const expected = [...divisionTeams(division)].sort();
+        const actual = [...value[division]].sort();
+        return actual.length === 5 && JSON.stringify(expected) === JSON.stringify(actual);
+      });
+    }
+
+    function loadSavedStandings() {
+      try {
+        const stored = JSON.parse(localStorage.getItem(STANDINGS_STORAGE_KEY));
+        if (validStandings(stored)) {
+          return {
+            yearLabel: String(stored.yearLabel || "Previous year"),
+            Xavier: [...stored.Xavier],
+            Ignatius: [...stored.Ignatius]
+          };
+        }
+      } catch (error) {
+        console.warn("Could not load saved standings.", error);
+      }
+      return {
+        yearLabel: DEFAULT_STANDINGS.yearLabel,
+        Xavier: [...DEFAULT_STANDINGS.Xavier],
+        Ignatius: [...DEFAULT_STANDINGS.Ignatius]
+      };
+    }
+
+    function saveStandings() {
+      try {
+        localStorage.setItem(STANDINGS_STORAGE_KEY, JSON.stringify(standingsState));
+      } catch (error) {
+        console.warn("Could not save standings.", error);
+      }
+    }
+
+    function samePlaceCrossovers(standings = standingsState) {
+      return standings.Xavier.map((team, index) => [team, standings.Ignatius[index]]);
+    }
+
+    function isDivisionalMatchup(teamA, teamB) {
+      return TEAM_META[teamA].division === TEAM_META[teamB].division;
+    }
+
+    function buildRequiredPairCounts() {
+      const counts = {};
+      for (let first = 0; first < TEAMS.length; first += 1) {
+        for (let second = first + 1; second < TEAMS.length; second += 1) {
+          counts[pairKey(TEAMS[first], TEAMS[second])] = 1;
+        }
+      }
+      ["Xavier", "Ignatius"].forEach(division => {
+        const members = divisionTeams(division);
+        for (let first = 0; first < members.length; first += 1) {
+          for (let second = first + 1; second < members.length; second += 1) {
+            counts[pairKey(members[first], members[second])] += 1;
+          }
+        }
+      });
+      samePlaceCrossovers().forEach(([teamA, teamB]) => {
+        counts[pairKey(teamA, teamB)] += 1;
+      });
+      return counts;
+    }
+
+    function generatePerfectMatchings(teamList) {
+      if (!teamList.length) return [[]];
+      const first = teamList[0];
+      const matchings = [];
+      for (let index = 1; index < teamList.length; index += 1) {
+        const opponent = teamList[index];
+        const remaining = teamList.slice(1, index).concat(teamList.slice(index + 1));
+        generatePerfectMatchings(remaining).forEach(rest => matchings.push([[first, opponent], ...rest]));
+      }
+      return matchings;
+    }
+
+    const ALL_MATCHINGS = generatePerfectMatchings(TEAMS);
+    const MATCHING_DATA = ALL_MATCHINGS.map(matchups => {
+      const types = {};
+      matchups.forEach(([teamA, teamB]) => {
+        const type = isDivisionalMatchup(teamA, teamB) ? "D" : "C";
+        types[teamA] = type;
+        types[teamB] = type;
+      });
+      return {
+        matchups,
+        keys: matchups.map(pair => pairKey(...pair)),
+        types
+      };
+    });
+
+    let standingsState = loadSavedStandings();
+    let schedules = [];
+    let activeScheduleId = null;
+    let activeViewMode = "calendar";
+    let compareAId = null;
+    let compareBId = null;
+    let toastTimer = null;
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function mulberry32(seed) {
+      let value = seed >>> 0;
+      return function random() {
+        value += 0x6D2B79F5;
+        let t = value;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    function cloneSchedule(schedule) {
+      const clone = {};
+      for (let week = 1; week <= 14; week += 1) clone[week] = schedule[week].map(pair => [...pair]);
+      return clone;
+    }
+
+    function weekMap(matchups) {
+      const map = {};
+      for (const [teamA, teamB] of matchups) {
+        map[teamA] = teamB;
+        map[teamB] = teamA;
+      }
+      return map;
+    }
+
+    function hasWeekOneLock(schedule) {
+      const lockKey = pairKey(...WEEK_ONE_LOCK);
+      return schedule[1].some(pair => pairKey(...pair) === lockKey);
+    }
+
+    function hasFixedRivalryWeek(schedule) {
+      const expected = new Set(RIVALRIES.map(pair => pairKey(...pair)));
+      const actual = new Set(schedule[14].map(pair => pairKey(...pair)));
+      return expected.size === actual.size && [...expected].every(key => actual.has(key));
+    }
+
+    function hasNoBackToBackRepeats(schedule) {
+      for (let week = 1; week < 14; week += 1) {
+        const current = new Set(schedule[week].map(pair => pairKey(...pair)));
+        if (schedule[week + 1].some(pair => current.has(pairKey(...pair)))) return false;
+      }
+      return true;
+    }
+
+    function opponentStreakMetrics(schedule) {
+      const lookup = opponentLookup(schedule);
+      let maxDivisional = 0;
+      let maxCrossDivision = 0;
+      let valid = true;
+      for (const team of TEAMS) {
+        let currentType = null;
+        let currentLength = 0;
+        for (let week = 1; week <= 14; week += 1) {
+          const opponent = lookup[week][team];
+          const type = isDivisionalMatchup(team, opponent) ? "D" : "C";
+          currentLength = type === currentType ? currentLength + 1 : 1;
+          currentType = type;
+          if (type === "D") maxDivisional = Math.max(maxDivisional, currentLength);
+          else maxCrossDivision = Math.max(maxCrossDivision, currentLength);
+          if ((type === "D" && currentLength > MAX_DIVISIONAL_STREAK) || (type === "C" && currentLength > MAX_CROSS_DIVISION_STREAK)) valid = false;
+        }
+      }
+      return { maxDivisional, maxCrossDivision, valid };
+    }
+
+    function hasOpponentStreakLimits(schedule) {
+      return opponentStreakMetrics(schedule).valid;
+    }
+
+    function countPairs(schedule) {
+      const counts = {};
+      for (let week = 1; week <= 14; week += 1) {
+        for (const pair of schedule[week]) {
+          const key = pairKey(...pair);
+          counts[key] = (counts[key] || 0) + 1;
+        }
+      }
+      return counts;
+    }
+
+    function pairCountsMatch(schedule) {
+      const counts = countPairs(schedule);
+      const expectedEntries = Object.entries(buildRequiredPairCounts()).sort((a, b) => a[0].localeCompare(b[0]));
+      const actualEntries = Object.entries(counts).sort((a, b) => a[0].localeCompare(b[0]));
+      return JSON.stringify(expectedEntries) === JSON.stringify(actualEntries);
+    }
+
+    function eachTeamPlaysOncePerWeek(schedule) {
+      for (let week = 1; week <= 14; week += 1) {
+        const appearances = Object.fromEntries(TEAMS.map(team => [team, 0]));
+        if (!schedule[week] || schedule[week].length !== 5) return false;
+        for (const [teamA, teamB] of schedule[week]) {
+          if (!(teamA in appearances) || !(teamB in appearances)) return false;
+          appearances[teamA] += 1;
+          appearances[teamB] += 1;
+        }
+        if (Object.values(appearances).some(value => value !== 1)) return false;
+      }
+      return true;
+    }
+
+    function validateSchedule(schedule) {
+      return eachTeamPlaysOncePerWeek(schedule)
+        && pairCountsMatch(schedule)
+        && hasWeekOneLock(schedule)
+        && hasFixedRivalryWeek(schedule)
+        && hasNoBackToBackRepeats(schedule)
+        && hasOpponentStreakLimits(schedule);
+    }
+
+    function scheduleSignature(schedule) {
+      return Array.from({ length: 14 }, (_, index) => {
+        const week = index + 1;
+        return schedule[week].map(pair => pairKey(...pair)).sort().join(";");
+      }).join("||");
+    }
+
+    function generateScheduleFromScratch(seed, timeLimitMs = 1200, nodeLimit = 120000) {
+      const random = mulberry32(seed);
+      const remaining = buildRequiredPairCounts();
+      const schedule = { 14: RIVALRIES.map(pair => [...pair]) };
+      const rivalryKeys = new Set(RIVALRIES.map(pair => pairKey(...pair)));
+      const startTime = performance.now();
+      let nodes = 0;
+
+      RIVALRIES.forEach(pair => {
+        const key = pairKey(...pair);
+        remaining[key] -= 1;
+      });
+
+      const initialTypes = Object.fromEntries(TEAMS.map(team => [team, null]));
+      const initialLengths = Object.fromEntries(TEAMS.map(team => [team, 0]));
+
+      function search(week, previousKeys, streakTypes, streakLengths) {
+        nodes += 1;
+        if (nodes > nodeLimit || performance.now() - startTime > timeLimitMs) return false;
+
+        if (week === 14) {
+          if (Object.values(remaining).some(value => value !== 0)) return false;
+          if ([...rivalryKeys].some(key => previousKeys.has(key))) return false;
+          for (const [teamA, teamB] of RIVALRIES) {
+            const type = isDivisionalMatchup(teamA, teamB) ? "D" : "C";
+            for (const team of [teamA, teamB]) {
+              const nextLength = streakTypes[team] === type ? streakLengths[team] + 1 : 1;
+              if ((type === "D" && nextLength > MAX_DIVISIONAL_STREAK) || (type === "C" && nextLength > MAX_CROSS_DIVISION_STREAK)) return false;
+            }
+          }
+          return true;
+        }
+
+        const candidates = [];
+        for (let index = 0; index < MATCHING_DATA.length; index += 1) {
+          const candidate = MATCHING_DATA[index];
+          if (week === 1 && !candidate.keys.includes(pairKey(...WEEK_ONE_LOCK))) continue;
+          if (candidate.keys.some(key => remaining[key] <= 0 || previousKeys.has(key))) continue;
+          if (week === 13 && candidate.keys.some(key => rivalryKeys.has(key))) continue;
+
+          let valid = true;
+          let maxLimitHits = 0;
+          const nextLengths = {};
+          for (const team of TEAMS) {
+            const type = candidate.types[team];
+            const nextLength = streakTypes[team] === type ? streakLengths[team] + 1 : 1;
+            nextLengths[team] = nextLength;
+            const limit = type === "D" ? MAX_DIVISIONAL_STREAK : MAX_CROSS_DIVISION_STREAK;
+            if (nextLength > limit) {
+              valid = false;
+              break;
+            }
+            if (nextLength === limit) maxLimitHits += 1;
+          }
+          if (!valid) continue;
+
+          const remainingWeight = candidate.keys.reduce((sum, key) => sum + remaining[key], 0);
+          const score = random() + maxLimitHits * 0.11 - remainingWeight * 0.025;
+          candidates.push({ candidate, nextLengths, score });
+        }
+
+        candidates.sort((first, second) => first.score - second.score);
+
+        for (const item of candidates) {
+          const { candidate, nextLengths } = item;
+          candidate.keys.forEach(key => { remaining[key] -= 1; });
+          const weeksAfter = 13 - week;
+          let feasible = true;
+
+          for (const team of TEAMS) {
+            let degree = 0;
+            for (const [key, count] of Object.entries(remaining)) {
+              if (count > 0 && key.split("|||").includes(team)) degree += count;
+            }
+            if (degree !== weeksAfter) {
+              feasible = false;
+              break;
+            }
+          }
+
+          if (feasible && Object.values(remaining).some(value => value > weeksAfter)) feasible = false;
+          if (feasible && week === 13 && Object.values(remaining).some(value => value !== 0)) feasible = false;
+
+          if (feasible) {
+            const nextWeek = week + 1;
+            for (const team of TEAMS) {
+              const currentType = candidate.types[team];
+              const currentLimit = currentType === "D" ? MAX_DIVISIONAL_STREAK : MAX_CROSS_DIVISION_STREAK;
+              if (nextLengths[team] < currentLimit) continue;
+              const requiredNextType = currentType === "D" ? "C" : "D";
+
+              if (nextWeek === 14) {
+                const rivalry = RIVALRIES.find(pair => pair.includes(team));
+                const opponent = rivalry[0] === team ? rivalry[1] : rivalry[0];
+                const fixedType = isDivisionalMatchup(team, opponent) ? "D" : "C";
+                if (fixedType !== requiredNextType) {
+                  feasible = false;
+                  break;
+                }
+              } else {
+                let hasRequiredOpponent = false;
+                for (const [key, count] of Object.entries(remaining)) {
+                  if (count <= 0) continue;
+                  const [teamA, teamB] = key.split("|||");
+                  if (teamA !== team && teamB !== team) continue;
+                  const type = isDivisionalMatchup(teamA, teamB) ? "D" : "C";
+                  if (type === requiredNextType) {
+                    hasRequiredOpponent = true;
+                    break;
+                  }
+                }
+                if (!hasRequiredOpponent) {
+                  feasible = false;
+                  break;
+                }
+              }
+            }
+          }
+
+          if (feasible) {
+            schedule[week] = candidate.matchups.map(pair => [...pair]);
+            if (search(week + 1, new Set(candidate.keys), candidate.types, nextLengths)) return true;
+            delete schedule[week];
+          }
+
+          candidate.keys.forEach(key => { remaining[key] += 1; });
+        }
+        return false;
+      }
+
+      return search(1, new Set(), initialTypes, initialLengths) ? schedule : null;
+    }
+
+    function generateVariant(seed) {
+      for (let retry = 0; retry < 10; retry += 1) {
+        const attemptSeed = (seed + Math.imul(retry + 1, 1597334677)) >>> 0;
+        const schedule = generateScheduleFromScratch(attemptSeed);
+        if (schedule && validateSchedule(schedule)) return schedule;
+      }
+      throw new Error("Could not build a schedule under the current rules. Try another base seed.");
+    }
+
+    function opponentLookup(schedule) {
+      const lookup = {};
+      for (let week = 1; week <= 14; week += 1) {
+        lookup[week] = weekMap(schedule[week]);
+      }
+      return lookup;
+    }
+
+    function minimumRepeatGap(schedule) {
+      const weeksByPair = {};
+      for (let week = 1; week <= 14; week += 1) {
+        for (const pair of schedule[week]) {
+          const key = pairKey(...pair);
+          if (!weeksByPair[key]) weeksByPair[key] = [];
+          weeksByPair[key].push(week);
+        }
+      }
+      const gaps = Object.values(weeksByPair)
+        .filter(weeks => weeks.length > 1)
+        .map(weeks => weeks[1] - weeks[0]);
+      return Math.min(...gaps);
+    }
+
+    function exactWeeksInCommon(scheduleA, scheduleB) {
+      let count = 0;
+      for (let week = 1; week <= 14; week += 1) {
+        const first = scheduleA[week].map(pair => pairKey(...pair)).sort().join("|");
+        const second = scheduleB[week].map(pair => pairKey(...pair)).sort().join("|");
+        if (first === second) count += 1;
+      }
+      return count;
+    }
+
+    function teamWeekSimilarity(scheduleA, scheduleB) {
+      const lookupA = opponentLookup(scheduleA);
+      const lookupB = opponentLookup(scheduleB);
+      let same = 0;
+      for (let week = 1; week <= 14; week += 1) {
+        for (const team of TEAMS) {
+          if (lookupA[week][team] === lookupB[week][team]) same += 1;
+        }
+      }
+      return same;
+    }
+
+    function scheduleMetrics(schedule) {
+      const streaks = opponentStreakMetrics(schedule);
+      return {
+        minRepeatGap: minimumRepeatGap(schedule),
+        maxDivisionalStreak: streaks.maxDivisional,
+        maxCrossDivisionStreak: streaks.maxCrossDivision
+      };
+    }
+
+    function makeScheduleObject(index, seed, schedule) {
+      return {
+        id: `schedule-${Date.now()}-${index}-${seed}`,
+        label: `Schedule ${index + 1}`,
+        seed,
+        data: schedule,
+        metrics: scheduleMetrics(schedule)
+      };
+    }
+
+    async function generateScheduleSet() {
+      const count = Number(document.getElementById("scheduleCount").value);
+      let baseSeed = Number(document.getElementById("seedInput").value);
+      if (!Number.isFinite(baseSeed) || baseSeed <= 0) baseSeed = 734921;
+      baseSeed = Math.floor(baseSeed) >>> 0;
+      document.getElementById("seedInput").value = baseSeed;
+
+      try {
+        setLoading(true, "Preparing schedule search…");
+        await new Promise(resolve => setTimeout(resolve, 30));
+        const generated = [];
+        const signatures = new Set();
+        let salt = 0;
+
+        for (let index = 0; index < count; index += 1) {
+          document.getElementById("loadingText").textContent = `Generating schedule ${index + 1} of ${count}…`;
+          await new Promise(resolve => setTimeout(resolve, 0));
+          let candidate;
+          let signature;
+          let scheduleSeed;
+          let retries = 0;
+          do {
+            scheduleSeed = (baseSeed + Math.imul(index + 1 + salt, 2654435761)) >>> 0;
+            candidate = generateVariant(scheduleSeed);
+            signature = scheduleSignature(candidate);
+            salt += 1;
+            retries += 1;
+          } while (signatures.has(signature) && retries < 25);
+
+          signatures.add(signature);
+          generated.push(makeScheduleObject(index, scheduleSeed, candidate));
+        }
+
+        schedules = generated;
+        activeScheduleId = schedules[0]?.id ?? null;
+        compareAId = schedules[0]?.id ?? null;
+        compareBId = schedules[1]?.id ?? schedules[0]?.id ?? null;
+        renderEverything();
+        showToast(`${schedules.length} unique schedules generated using ${standingsState.yearLabel} standings.`);
+      } catch (error) {
+        console.error(error);
+        showToast(error.message || "The schedule search failed.", true);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    async function replaceActiveSchedule() {
+      if (!activeScheduleId) return;
+      const activeIndex = schedules.findIndex(schedule => schedule.id === activeScheduleId);
+      if (activeIndex < 0) return;
+      try {
+        setLoading(true, "Generating replacement schedule…");
+        await new Promise(resolve => setTimeout(resolve, 25));
+        const signatures = new Set(schedules.filter((_, index) => index !== activeIndex).map(schedule => scheduleSignature(schedule.data)));
+        const seedBase = (Date.now() ^ schedules[activeIndex].seed) >>> 0;
+        let candidate;
+        let signature;
+        let scheduleSeed = seedBase;
+        let tries = 0;
+        do {
+          scheduleSeed = (seedBase + Math.imul(tries + 1, 2246822519)) >>> 0;
+          candidate = generateVariant(scheduleSeed);
+          signature = scheduleSignature(candidate);
+          tries += 1;
+        } while (signatures.has(signature) && tries < 25);
+
+        const replacement = makeScheduleObject(activeIndex, scheduleSeed, candidate);
+        replacement.label = schedules[activeIndex].label;
+        replacement.id = schedules[activeIndex].id;
+        schedules[activeIndex] = replacement;
+        renderEverything();
+        showToast(`${replacement.label} was replaced with a new valid schedule.`);
+      } catch (error) {
+        console.error(error);
+        showToast(error.message || "Could not replace the schedule.", true);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function activeSchedule() {
+      return schedules.find(schedule => schedule.id === activeScheduleId) || schedules[0] || null;
+    }
+
+    function colorForTeam(team) {
+      return TEAM_META[team]?.color || "#52677F";
+    }
+
+    function readableText(hexColor) {
+      const value = hexColor.replace("#", "");
+      const r = parseInt(value.slice(0, 2), 16);
+      const g = parseInt(value.slice(2, 4), 16);
+      const b = parseInt(value.slice(4, 6), 16);
+      return 0.299 * r + 0.587 * g + 0.114 * b > 160 ? "#071326" : "#ffffff";
+    }
+
+    function styleForTeam(team) {
+      const background = colorForTeam(team);
+      return `background:${background};color:${readableText(background)};`;
+    }
+
+    function matchupType(week, teamA, teamB) {
+      const key = pairKey(teamA, teamB);
+      if (week === 14) return "Rivalry Week";
+      if (week === 1 && key === pairKey(...WEEK_ONE_LOCK)) return "Week 1 Lock";
+      if (TEAM_META[teamA].division === TEAM_META[teamB].division) return "Divisional";
+      if (samePlaceCrossovers().some(pair => pairKey(...pair) === key)) return "Same-Place Crossover";
+      return "Cross-Division";
+    }
+
+    function orderedMatchups(schedule, week) {
+      const matchups = schedule[week].map(pair => [...pair]);
+      matchups.forEach(pair => pair.sort((a, b) => TEAM_INDEX[a] - TEAM_INDEX[b]));
+      matchups.sort((a, b) => TEAM_INDEX[a[0]] - TEAM_INDEX[b[0]] || TEAM_INDEX[a[1]] - TEAM_INDEX[b[1]]);
+      if (week === 1) {
+        const lockKey = pairKey(...WEEK_ONE_LOCK);
+        matchups.sort((a, b) => (pairKey(...a) === lockKey ? -1 : pairKey(...b) === lockKey ? 1 : 0));
+      }
+      if (week === 14) {
+        return RIVALRIES.map(rivalry => {
+          const key = pairKey(...rivalry);
+          return matchups.find(pair => pairKey(...pair) === key) || rivalry;
+        });
+      }
+      return matchups;
+    }
+
+    function renderSummary() {
+      const unique = new Set(schedules.map(schedule => scheduleSignature(schedule.data))).size;
+      const averageGap = schedules.length
+        ? (schedules.reduce((sum, schedule) => sum + schedule.metrics.minRepeatGap, 0) / schedules.length).toFixed(1)
+        : "—";
+      const exactValid = schedules.filter(schedule => validateSchedule(schedule.data)).length;
+      const active = activeSchedule();
+
+      document.getElementById("summaryStrip").innerHTML = [
+        ["Schedules", schedules.length || "—", `${unique || 0} unique variants`],
+        ["Validation", schedules.length ? `${exactValid}/${schedules.length}` : "—", schedules.length ? `All checks pass · ${standingsState.yearLabel} standings` : "Generate schedules to begin"],
+        ["Average minimum gap", averageGap, "Weeks between repeat opponents"],
+        ["Selected seed", active ? active.seed : "—", active ? active.label : "No schedule selected"]
+      ].map(([label, value, note]) => `
+        <article class="metric-card">
+          <div class="metric-label">${escapeHtml(label)}</div>
+          <div class="metric-value">${escapeHtml(value)}</div>
+          <div class="metric-note">${escapeHtml(note)}</div>
+        </article>
+      `).join("");
+    }
+
+    function renderScheduleList() {
+      const list = document.getElementById("scheduleList");
+      document.getElementById("scheduleListSubtitle").textContent = schedules.length
+        ? `${schedules.length} valid options available`
+        : "Choose a schedule to inspect";
+
+      if (!schedules.length) {
+        list.innerHTML = '<div class="empty-state">Generate schedules to populate the comparison workspace.</div>';
+        return;
+      }
+
+      list.innerHTML = schedules.map(schedule => {
+        const activeClass = schedule.id === activeScheduleId ? "active" : "";
+        return `
+          <button class="schedule-card ${activeClass}" data-select-schedule="${escapeHtml(schedule.id)}">
+            <div class="schedule-card-top">
+              <div>
+                <div class="schedule-name">${escapeHtml(schedule.label)}</div>
+                <div class="schedule-seed">Seed ${schedule.seed}</div>
+              </div>
+              <span class="status-dot" title="Valid schedule"></span>
+            </div>
+            <div class="schedule-mini-metrics">
+              <div class="mini-metric"><strong>${schedule.metrics.minRepeatGap} weeks</strong>Minimum repeat gap</div>
+              <div class="mini-metric"><strong>${schedule.metrics.maxCrossDivisionStreak} / ${schedule.metrics.maxDivisionalStreak}</strong>Max cross / division streak</div>
+            </div>
+            <div class="card-actions">
+              <span class="btn btn-small btn-ghost" data-download-schedule="${escapeHtml(schedule.id)}">Excel</span>
+              <span class="btn btn-small btn-ghost" data-set-compare-a="${escapeHtml(schedule.id)}">Set A</span>
+              <span class="btn btn-small btn-ghost" data-set-compare-b="${escapeHtml(schedule.id)}">Set B</span>
+            </div>
+          </button>
+        `;
+      }).join("");
+    }
+
+    function renderSelectedSchedule() {
+      const container = document.getElementById("scheduleTab");
+      const scheduleObject = activeSchedule();
+      if (!scheduleObject) {
+        container.innerHTML = '<div class="empty-state">Generate schedules to inspect a team calendar.</div>';
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="section-top">
+          <div>
+            <h2>${escapeHtml(scheduleObject.label)}</h2>
+            <p>Seed ${scheduleObject.seed} · Minimum repeat gap ${scheduleObject.metrics.minRepeatGap} weeks · Max streaks: ${scheduleObject.metrics.maxCrossDivisionStreak} cross-division / ${scheduleObject.metrics.maxDivisionalStreak} divisional</p>
+          </div>
+          <div class="segmented">
+            <button class="segment-btn ${activeViewMode === "calendar" ? "active" : ""}" data-view-mode="calendar">Team calendar</button>
+            <button class="segment-btn ${activeViewMode === "weekly" ? "active" : ""}" data-view-mode="weekly">Weekly matchups</button>
+          </div>
+        </div>
+        <div id="selectedScheduleBody"></div>
+      `;
+
+      const body = document.getElementById("selectedScheduleBody");
+      body.innerHTML = activeViewMode === "weekly"
+        ? weeklyCardsHtml(scheduleObject.data)
+        : calendarTableHtml(scheduleObject.data);
+    }
+
+    function calendarTableHtml(schedule) {
+      const lookup = opponentLookup(schedule);
+      const headers = TEAMS.map(team => `<th style="${styleForTeam(team)}">${escapeHtml(team)}</th>`).join("");
+      const rows = Array.from({ length: 14 }, (_, index) => {
+        const week = index + 1;
+        const className = week === 14 ? "rivalry-row" : week === 1 ? "week-one" : "";
+        const cells = TEAMS.map(team => {
+          const opponent = lookup[week][team];
+          return `<td class="opponent-cell" style="${styleForTeam(opponent)}" title="${escapeHtml(team)} vs. ${escapeHtml(opponent)}">${escapeHtml(opponent)}</td>`;
+        }).join("");
+        const weekLabel = week === 14 ? "14 · Rivalry" : week === 1 ? "1 · Locked" : String(week);
+        return `<tr class="${className}"><td class="sticky-col">${weekLabel}</td>${cells}</tr>`;
+      }).join("");
+
+      return `
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th class="sticky-col">Week</th>${headers}</tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function weeklyCardsHtml(schedule) {
+      return `<div class="weekly-grid">${Array.from({ length: 14 }, (_, index) => {
+        const week = index + 1;
+        const matchupLines = orderedMatchups(schedule, week).map(([teamA, teamB]) => `
+          <div class="matchup-line">
+            <span class="team-chip" style="${styleForTeam(teamA)}">${escapeHtml(teamA)}</span>
+            <span class="vs">VS</span>
+            <span class="team-chip" style="${styleForTeam(teamB)}">${escapeHtml(teamB)}</span>
+          </div>
+        `).join("");
+        return `
+          <article class="week-card ${week === 14 ? "rivalry" : ""}">
+            <div class="week-card-header">
+              <span class="week-label">Week ${week}</span>
+              <span class="week-type">${week === 14 ? "Rivalry Week" : week === 1 ? "Ted vs. Charlie locked" : "5 matchups"}</span>
+            </div>
+            ${matchupLines}
+          </article>
+        `;
+      }).join("")}</div>`;
+    }
+
+    function scheduleOptions(selectedId) {
+      return schedules.map(schedule => `<option value="${escapeHtml(schedule.id)}" ${schedule.id === selectedId ? "selected" : ""}>${escapeHtml(schedule.label)} · Seed ${schedule.seed}</option>`).join("");
+    }
+
+    function renderCompare() {
+      const container = document.getElementById("compareTab");
+      if (schedules.length < 2) {
+        container.innerHTML = '<div class="empty-state">Generate at least two schedules to compare them.</div>';
+        return;
+      }
+
+      if (!schedules.some(schedule => schedule.id === compareAId)) compareAId = schedules[0].id;
+      if (!schedules.some(schedule => schedule.id === compareBId)) compareBId = schedules[1].id;
+      const scheduleA = schedules.find(schedule => schedule.id === compareAId);
+      const scheduleB = schedules.find(schedule => schedule.id === compareBId);
+      const sameCells = teamWeekSimilarity(scheduleA.data, scheduleB.data);
+      const exactWeeks = exactWeeksInCommon(scheduleA.data, scheduleB.data);
+      const changedGames = (140 - sameCells) / 2;
+      const similarityPercent = Math.round((sameCells / 140) * 100);
+
+      const lookupA = opponentLookup(scheduleA.data);
+      const lookupB = opponentLookup(scheduleB.data);
+      const headers = TEAMS.map(team => `<th style="${styleForTeam(team)}">${escapeHtml(team)}</th>`).join("");
+      const rows = Array.from({ length: 14 }, (_, index) => {
+        const week = index + 1;
+        const className = week === 14 ? "rivalry-row" : week === 1 ? "week-one" : "";
+        const cells = TEAMS.map(team => {
+          const opponentA = lookupA[week][team];
+          const opponentB = lookupB[week][team];
+          if (opponentA === opponentB) {
+            return `<td class="compare-cell same"><span class="compare-badge" style="${styleForTeam(opponentA)}">${escapeHtml(opponentA)}</span></td>`;
+          }
+          return `<td class="compare-cell changed"><span class="compare-badge" style="${styleForTeam(opponentA)}">${escapeHtml(opponentA)}</span><span class="compare-arrow">→</span><span class="compare-badge" style="${styleForTeam(opponentB)}">${escapeHtml(opponentB)}</span></td>`;
+        }).join("");
+        return `<tr class="${className}"><td class="sticky-col">${week}</td>${cells}</tr>`;
+      }).join("");
+
+      container.innerHTML = `
+        <div class="section-top">
+          <div>
+            <h2>Head-to-head schedule comparison</h2>
+            <p>Green cells are unchanged. Gold cells show the opponent changing from Schedule A to Schedule B.</p>
+          </div>
+        </div>
+        <div class="compare-controls">
+          <div class="field"><label for="compareASelect">Schedule A</label><select id="compareASelect">${scheduleOptions(compareAId)}</select></div>
+          <div class="field"><label for="compareBSelect">Schedule B</label><select id="compareBSelect">${scheduleOptions(compareBId)}</select></div>
+          <button class="btn btn-ghost" id="swapCompareBtn">Swap A / B</button>
+        </div>
+        <div class="compare-stats">
+          <article class="metric-card"><div class="metric-label">Similarity</div><div class="metric-value">${similarityPercent}%</div><div class="metric-note">Same opponent in the same week</div></article>
+          <article class="metric-card"><div class="metric-label">Exact weeks</div><div class="metric-value">${exactWeeks}/14</div><div class="metric-note">Entire weekly slate matches</div></article>
+          <article class="metric-card"><div class="metric-label">Changed matchup slots</div><div class="metric-value">${changedGames}</div><div class="metric-note">Game-week placements differ</div></article>
+          <article class="metric-card"><div class="metric-label">Fixed weeks</div><div class="metric-value">2</div><div class="metric-note">Week 1 lock and Week 14 slate</div></article>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th class="sticky-col">Week</th>${headers}</tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderSimilarityMatrix() {
+      const container = document.getElementById("similarityTab");
+      if (!schedules.length) {
+        container.innerHTML = '<div class="empty-state">Generate schedules to build the all-schedule similarity matrix.</div>';
+        return;
+      }
+
+      const headers = schedules.map(schedule => `<th>${escapeHtml(schedule.label)}</th>`).join("");
+      const rows = schedules.map((rowSchedule, rowIndex) => {
+        const cells = schedules.map((columnSchedule, columnIndex) => {
+          if (rowIndex === columnIndex) return '<td class="similarity-cell similarity-self">—</td>';
+          const same = teamWeekSimilarity(rowSchedule.data, columnSchedule.data);
+          const percentage = Math.round((same / 140) * 100);
+          const className = percentage >= 65 ? "similarity-high" : percentage >= 45 ? "similarity-mid" : "similarity-low";
+          return `<td class="similarity-cell ${className}">${percentage}%</td>`;
+        }).join("");
+        return `<tr><td class="sticky-col">${escapeHtml(rowSchedule.label)}</td>${cells}</tr>`;
+      }).join("");
+
+      container.innerHTML = `
+        <div class="section-top">
+          <div>
+            <h2>All-schedule similarity matrix</h2>
+            <p>Percentages measure how often a team has the same opponent in the same week across two schedules.</p>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th class="sticky-col">Schedule</th>${headers}</tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderRules() {
+      const active = activeSchedule();
+      const checks = active ? [
+        ["Every team plays exactly once in each week", eachTeamPlaysOncePerWeek(active.data)],
+        ["All bylaw matchup counts match the selected standings", pairCountsMatch(active.data)],
+        ["Ted Williams vs. Charlie Vonderheid is in Week 1", hasWeekOneLock(active.data)],
+        ["All five Week 14 rivalries are fixed", hasFixedRivalryWeek(active.data)],
+        ["No matchup repeats in consecutive weeks", hasNoBackToBackRepeats(active.data)],
+        ["No team has more than two cross-division games in a row", opponentStreakMetrics(active.data).maxCrossDivision <= MAX_CROSS_DIVISION_STREAK],
+        ["No team has more than three divisional games in a row", opponentStreakMetrics(active.data).maxDivisional <= MAX_DIVISIONAL_STREAK]
+      ] : [];
+
+      const divisionsHtml = ["Xavier", "Ignatius"].map(division => {
+        const teams = standingsState[division].map((team, index) => `<span class="team-chip" style="${styleForTeam(team)}">${index + 1}. ${escapeHtml(team)}</span>`).join("");
+        return `<div><div class="division-title">${division} Division · ${escapeHtml(standingsState.yearLabel)} finish</div><div class="division-teams">${teams}</div></div>`;
+      }).join("");
+
+      const crossoverHtml = samePlaceCrossovers().map(([teamA, teamB], index) => `<div class="validation-row"><span>${index + 1} vs. ${index + 1}</span><span>${escapeHtml(teamA)} vs. ${escapeHtml(teamB)}</span></div>`).join("");
+
+      document.getElementById("rulesTab").innerHTML = `
+        <div class="section-top">
+          <div>
+            <h2>League schedule rules</h2>
+            <p>The generator builds the complete schedule from the selected prior-year standings and validates every rule before displaying it.</p>
+          </div>
+        </div>
+        <div class="rules-grid">
+          <article class="info-card">
+            <h3>Schedule construction</h3>
+            <div class="rule-list">
+              <div class="rule-item"><div class="rule-num">1</div><div>Each team plays all nine other teams once.</div></div>
+              <div class="rule-item"><div class="rule-num">2</div><div>Each team plays its four divisional opponents one additional time.</div></div>
+              <div class="rule-item"><div class="rule-num">3</div><div>Each team plays one additional cross-division game against the team that finished in the same divisional position last season.</div></div>
+              <div class="rule-item"><div class="rule-num">4</div><div>Week 14 is the fixed rivalry slate. Ted Williams and Charlie Vonderheid are locked together in Week 1.</div></div>
+              <div class="rule-item"><div class="rule-num">5</div><div>A matchup cannot repeat in back-to-back weeks.</div></div>
+              <div class="rule-item"><div class="rule-num">6</div><div>A team may play at most two consecutive cross-division games and at most three consecutive divisional games.</div></div>
+            </div>
+          </article>
+          <div style="display:grid;gap:14px">
+            <article class="info-card"><h3>Divisions and standings</h3><div class="division-list">${divisionsHtml}</div></article>
+            <article class="info-card"><h3>Extra same-place games</h3><div class="validation-list">${crossoverHtml}</div></article>
+            <article class="info-card">
+              <h3>${active ? `${escapeHtml(active.label)} validation` : "Validation"}</h3>
+              <div class="validation-list">
+                ${checks.length ? checks.map(([label, passed]) => `<div class="validation-row"><span>${escapeHtml(label)}</span><span class="${passed ? "pass" : ""}">${passed ? "PASS" : "FAIL"}</span></div>`).join("") : '<div class="validation-row"><span>Generate a schedule to run checks.</span></div>'}
+              </div>
+            </article>
+          </div>
+        </div>
+      `;
+    }
+
+    function editorStandingsFromDom() {
+      const result = {
+        yearLabel: document.getElementById("standingsYearInput").value.trim() || "Previous year",
+        Xavier: [],
+        Ignatius: []
+      };
+      document.querySelectorAll("[data-standing-division]").forEach(select => {
+        result[select.dataset.standingDivision][Number(select.dataset.standingPlace) - 1] = select.value;
+      });
+      return result;
+    }
+
+    function renderCrossoverPreview(standings = editorStandingsFromDom()) {
+      const preview = document.getElementById("crossoverPreview");
+      if (!preview) return;
+      preview.innerHTML = samePlaceCrossovers(standings).map(([teamA, teamB], index) => `
+        <div class="crossover-card">
+          <strong>${index + 1} vs. ${index + 1}</strong>
+          ${escapeHtml(teamA)}<br>vs.<br>${escapeHtml(teamB)}
+        </div>
+      `).join("");
+    }
+
+    function bindStandingsSelectEvents() {
+      document.querySelectorAll("[data-standing-division]").forEach(select => {
+        select.addEventListener("change", () => {
+          const division = select.dataset.standingDivision;
+          const oldTeam = select.dataset.currentTeam;
+          const newTeam = select.value;
+          const sibling = [...document.querySelectorAll(`[data-standing-division="${division}"]`)]
+            .find(other => other !== select && other.value === newTeam);
+          if (sibling) {
+            sibling.value = oldTeam;
+            sibling.dataset.currentTeam = oldTeam;
+          }
+          select.dataset.currentTeam = newTeam;
+          renderCrossoverPreview();
+        });
+      });
+      document.getElementById("standingsYearInput").addEventListener("input", () => renderCrossoverPreview());
+    }
+
+    function renderStandingsEditor(source = standingsState) {
+      document.getElementById("standingsYearInput").value = source.yearLabel;
+      document.getElementById("standingsEditor").innerHTML = ["Xavier", "Ignatius"].map(division => {
+        const options = divisionTeams(division);
+        const rows = source[division].map((selectedTeam, index) => `
+          <div class="standing-row">
+            <div class="place-badge">${index + 1}</div>
+            <select data-standing-division="${division}" data-standing-place="${index + 1}" data-current-team="${escapeHtml(selectedTeam)}" aria-label="${division} place ${index + 1}">
+              ${options.map(team => `<option value="${escapeHtml(team)}" ${team === selectedTeam ? "selected" : ""}>${escapeHtml(team)}</option>`).join("")}
+            </select>
+          </div>
+        `).join("");
+        return `<article class="standings-division-card"><div class="division-title" style="margin:0">${division} Division</div>${rows}</article>`;
+      }).join("");
+      bindStandingsSelectEvents();
+      renderCrossoverPreview(source);
+    }
+
+    async function applyStandingsAndRegenerate() {
+      const candidate = editorStandingsFromDom();
+      if (!validStandings(candidate)) {
+        showToast("Each division must contain all five teams exactly once.", true);
+        return;
+      }
+      standingsState = {
+        yearLabel: candidate.yearLabel,
+        Xavier: [...candidate.Xavier],
+        Ignatius: [...candidate.Ignatius]
+      };
+      saveStandings();
+      schedules = [];
+      activeScheduleId = null;
+      compareAId = null;
+      compareBId = null;
+      renderEverything();
+      await generateScheduleSet();
+    }
+
+    function renderEverything() {
+      renderSummary();
+      renderScheduleList();
+      renderSelectedSchedule();
+      renderCompare();
+      renderSimilarityMatrix();
+      renderRules();
+      bindDynamicEvents();
+      updateDownloadButtons();
+    }
+
+    function bindDynamicEvents() {
+      document.querySelectorAll("[data-select-schedule]").forEach(card => {
+        card.addEventListener("click", event => {
+          if (event.target.closest("[data-download-schedule], [data-set-compare-a], [data-set-compare-b]")) return;
+          activeScheduleId = card.dataset.selectSchedule;
+          renderEverything();
+        });
+      });
+
+      document.querySelectorAll("[data-download-schedule]").forEach(button => {
+        button.addEventListener("click", async event => {
+          event.stopPropagation();
+          const schedule = schedules.find(item => item.id === button.dataset.downloadSchedule);
+          if (schedule) await downloadScheduleExcel(schedule);
+        });
+      });
+
+      document.querySelectorAll("[data-set-compare-a]").forEach(button => {
+        button.addEventListener("click", event => {
+          event.stopPropagation();
+          compareAId = button.dataset.setCompareA;
+          switchTab("compareTab");
+          renderCompare();
+          bindCompareEvents();
+        });
+      });
+
+      document.querySelectorAll("[data-set-compare-b]").forEach(button => {
+        button.addEventListener("click", event => {
+          event.stopPropagation();
+          compareBId = button.dataset.setCompareB;
+          switchTab("compareTab");
+          renderCompare();
+          bindCompareEvents();
+        });
+      });
+
+      bindViewModeEvents();
+      bindCompareEvents();
+    }
+
+    function bindViewModeEvents() {
+      document.querySelectorAll("[data-view-mode]").forEach(button => {
+        button.addEventListener("click", () => {
+          activeViewMode = button.dataset.viewMode;
+          renderSelectedSchedule();
+          bindViewModeEvents();
+        });
+      });
+    }
+
+    function bindCompareEvents() {
+      const compareASelect = document.getElementById("compareASelect");
+      const compareBSelect = document.getElementById("compareBSelect");
+      const swapCompareBtn = document.getElementById("swapCompareBtn");
+      if (compareASelect) compareASelect.addEventListener("change", () => {
+        compareAId = compareASelect.value;
+        renderCompare();
+        bindCompareEvents();
+      });
+      if (compareBSelect) compareBSelect.addEventListener("change", () => {
+        compareBId = compareBSelect.value;
+        renderCompare();
+        bindCompareEvents();
+      });
+      if (swapCompareBtn) swapCompareBtn.addEventListener("click", () => {
+        [compareAId, compareBId] = [compareBId, compareAId];
+        renderCompare();
+        bindCompareEvents();
+      });
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll(".tab-btn").forEach(button => button.classList.toggle("active", button.dataset.tab === tabId));
+      document.querySelectorAll(".tab-content").forEach(content => content.classList.toggle("active", content.id === tabId));
+    }
+
+    function updateDownloadButtons() {
+      const hasSchedules = schedules.length > 0;
+      document.getElementById("downloadActiveBtn").disabled = !hasSchedules;
+      document.getElementById("regenerateActiveBtn").disabled = !hasSchedules;
+      document.getElementById("combinedDownloadBtn").disabled = !hasSchedules;
+      document.getElementById("zipDownloadBtn").disabled = !hasSchedules;
+    }
+
+    function showToast(message, isError = false) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.toggle("error", isError);
+      toast.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove("show"), 3000);
+    }
+
+    function setLoading(show, text = "Building files…") {
+      document.getElementById("loadingText").textContent = text;
+      document.getElementById("loadingOverlay").classList.toggle("show", show);
+    }
+
+    function ensureExcelLibraries() {
+      if (!window.ExcelJS) throw new Error("ExcelJS did not load. Check the internet connection and reload the page.");
+      if (!window.JSZip) throw new Error("JSZip did not load. Check the internet connection and reload the page.");
+    }
+
+    function excelArgb(hexColor) {
+      return `FF${hexColor.replace("#", "").toUpperCase()}`;
+    }
+
+    function excelFontColor(hexColor) {
+      return excelArgb(readableText(hexColor));
+    }
+
+    function applyExcelTeamStyle(cell, team) {
+      const color = colorForTeam(team);
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: excelArgb(color) } };
+      cell.font = { bold: true, color: { argb: excelFontColor(color) } };
+      cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+    }
+
+    function applyExcelHeader(row, fill = "FF4472C4") {
+      row.eachCell(cell => {
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: fill } };
+        cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+        cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+        cell.border = { bottom: { style: "thin", color: { argb: "FFB4C7E7" } } };
+      });
+    }
+
+    function addWorkbookMetadata(workbook, title) {
+      workbook.creator = "SLUH ’22 Schedule Lab";
+      workbook.lastModifiedBy = "SLUH ’22 Schedule Lab";
+      workbook.created = new Date();
+      workbook.modified = new Date();
+      workbook.title = title;
+      workbook.subject = "Fantasy football regular-season schedule";
+      workbook.keywords = "fantasy football, schedule, SLUH";
+    }
+
+    function addWeeklyWorksheet(workbook, scheduleObject, sheetName = "Weekly Schedule") {
+      const sheet = workbook.addWorksheet(sheetName, { views: [{ state: "frozen", ySplit: 4 }] });
+      sheet.mergeCells("A1:E1");
+      sheet.getCell("A1").value = `SLUH ’22 Fantasy Football — ${scheduleObject.label}`;
+      sheet.getCell("A1").fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF17365D" } };
+      sheet.getCell("A1").font = { bold: true, size: 16, color: { argb: "FFFFFFFF" } };
+      sheet.getCell("A1").alignment = { horizontal: "center", vertical: "middle" };
+      sheet.getRow(1).height = 28;
+
+      sheet.mergeCells("A2:E2");
+      sheet.getCell("A2").value = `Seed ${scheduleObject.seed} | ${standingsState.yearLabel} standings | Week 14 rivalries fixed | Ted vs. Charlie Week 1 | Max streaks: 2 cross-division, 3 divisional`;
+      sheet.getCell("A2").fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFD9EAF7" } };
+      sheet.getCell("A2").font = { italic: true, color: { argb: "FF17365D" } };
+      sheet.getCell("A2").alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+      sheet.getRow(2).height = 32;
+
+      sheet.addRow([]);
+      const header = sheet.addRow(["Week", "Game", "Team 1", "Team 2", "Matchup Type"]);
+      applyExcelHeader(header);
+
+      for (let week = 1; week <= 14; week += 1) {
+        orderedMatchups(scheduleObject.data, week).forEach(([teamA, teamB], index) => {
+          const row = sheet.addRow([week, index + 1, teamA, teamB, matchupType(week, teamA, teamB)]);
+          row.height = 22;
+          row.getCell(1).alignment = { horizontal: "center", vertical: "middle" };
+          row.getCell(2).alignment = { horizontal: "center", vertical: "middle" };
+          applyExcelTeamStyle(row.getCell(3), teamA);
+          applyExcelTeamStyle(row.getCell(4), teamB);
+          row.getCell(5).alignment = { horizontal: "center", vertical: "middle" };
+          if (week === 14) {
+            row.getCell(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFE699" } };
+            row.getCell(2).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFE699" } };
+            row.getCell(5).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFD966" } };
+            row.getCell(5).font = { bold: true, color: { argb: "FF7F6000" } };
+          } else if (week % 2 === 0) {
+            [1, 2, 5].forEach(column => row.getCell(column).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF2F2F2" } });
+          }
+        });
+      }
+
+      sheet.columns = [
+        { key: "week", width: 9 },
+        { key: "game", width: 9 },
+        { key: "team1", width: 24 },
+        { key: "team2", width: 24 },
+        { key: "type", width: 25 }
+      ];
+      sheet.autoFilter = "A4:E74";
+      return sheet;
+    }
+
+    function addCalendarWorksheet(workbook, scheduleObject, sheetName = "Team Calendar") {
+      const sheet = workbook.addWorksheet(sheetName, { views: [{ state: "frozen", xSplit: 1, ySplit: 4 }] });
+      sheet.mergeCells(1, 1, 1, 12);
+      sheet.getCell(1, 1).value = `${scheduleObject.label} — Opponent by Team and Week`;
+      sheet.getCell(1, 1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF17365D" } };
+      sheet.getCell(1, 1).font = { bold: true, size: 16, color: { argb: "FFFFFFFF" } };
+      sheet.getCell(1, 1).alignment = { horizontal: "center", vertical: "middle" };
+      sheet.getRow(1).height = 28;
+
+      sheet.mergeCells(2, 1, 2, 12);
+      sheet.getCell(2, 1).value = "Each cell is colored using the opponent’s team color. Week 14 is the fixed rivalry slate.";
+      sheet.getCell(2, 1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFD9EAF7" } };
+      sheet.getCell(2, 1).font = { italic: true, color: { argb: "FF17365D" } };
+      sheet.getCell(2, 1).alignment = { horizontal: "center", vertical: "middle" };
+
+      sheet.addRow([]);
+      const header = sheet.addRow(["Week", ...TEAMS, "Notes"]);
+      applyExcelHeader(header);
+      TEAMS.forEach((team, index) => applyExcelTeamStyle(header.getCell(index + 2), team));
+
+      const lookup = opponentLookup(scheduleObject.data);
+      for (let week = 1; week <= 14; week += 1) {
+        const note = week === 14 ? "Rivalry Week — fixed" : week === 1 ? "Ted vs. Charlie fixed" : "";
+        const row = sheet.addRow([week, ...TEAMS.map(team => lookup[week][team]), note]);
+        row.height = 34;
+        row.getCell(1).alignment = { horizontal: "center", vertical: "middle" };
+        TEAMS.forEach((team, index) => applyExcelTeamStyle(row.getCell(index + 2), lookup[week][team]));
+        row.getCell(12).alignment = { vertical: "middle", wrapText: true };
+        if (week === 14) {
+          row.getCell(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFE699" } };
+          row.getCell(12).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFE699" } };
+          row.getCell(1).font = { bold: true, color: { argb: "FF7F6000" } };
+          row.getCell(12).font = { bold: true, color: { argb: "FF7F6000" } };
+        }
+      }
+
+      sheet.getColumn(1).width = 9;
+      for (let column = 2; column <= 11; column += 1) sheet.getColumn(column).width = 21;
+      sheet.getColumn(12).width = 24;
+      return sheet;
+    }
+
+    function addRulesWorksheet(workbook, scheduleObject, sheetName = "Rules & Validation") {
+      const sheet = workbook.addWorksheet(sheetName, { views: [{ state: "frozen", ySplit: 3 }] });
+      sheet.mergeCells("A1:F1");
+      sheet.getCell("A1").value = `${scheduleObject.label} — Rules and Validation`;
+      sheet.getCell("A1").fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF17365D" } };
+      sheet.getCell("A1").font = { bold: true, size: 16, color: { argb: "FFFFFFFF" } };
+      sheet.getCell("A1").alignment = { horizontal: "center" };
+      sheet.getRow(1).height = 28;
+
+      const header = sheet.getRow(3);
+      ["Rule", "Expected", "Actual", "Status", "Notes", "Source"].forEach((value, index) => header.getCell(index + 1).value = value);
+      applyExcelHeader(header);
+
+      const streaks = opponentStreakMetrics(scheduleObject.data);
+      const checks = [
+        ["Teams", 10, 10, "PASS", "Two divisions of five"],
+        ["Regular-season weeks", 14, 14, "PASS", "Five games each week"],
+        ["Total matchups", 70, 70, "PASS", "Ten teams × fourteen games ÷ two"],
+        ["Ted vs. Charlie in Week 1", 1, hasWeekOneLock(scheduleObject.data) ? 1 : 0, hasWeekOneLock(scheduleObject.data) ? "PASS" : "FAIL", "Locked matchup"],
+        ["Week 14 rivalry matchups", 5, hasFixedRivalryWeek(scheduleObject.data) ? 5 : 0, hasFixedRivalryWeek(scheduleObject.data) ? "PASS" : "FAIL", "Full slate locked"],
+        ["Back-to-back repeat violations", 0, hasNoBackToBackRepeats(scheduleObject.data) ? 0 : 1, hasNoBackToBackRepeats(scheduleObject.data) ? "PASS" : "FAIL", `Minimum repeat gap: ${minimumRepeatGap(scheduleObject.data)} weeks`],
+        ["Maximum cross-division streak", MAX_CROSS_DIVISION_STREAK, streaks.maxCrossDivision, streaks.maxCrossDivision <= MAX_CROSS_DIVISION_STREAK ? "PASS" : "FAIL", "No more than two in a row"],
+        ["Maximum divisional streak", MAX_DIVISIONAL_STREAK, streaks.maxDivisional, streaks.maxDivisional <= MAX_DIVISIONAL_STREAK ? "PASS" : "FAIL", "No more than three in a row"],
+        ["Pair-count mismatches", 0, pairCountsMatch(scheduleObject.data) ? 0 : 1, pairCountsMatch(scheduleObject.data) ? "PASS" : "FAIL", `${standingsState.yearLabel} same-place crossovers`],
+        ["Weekly participation errors", 0, eachTeamPlaysOncePerWeek(scheduleObject.data) ? 0 : 1, eachTeamPlaysOncePerWeek(scheduleObject.data) ? "PASS" : "FAIL", "Every team once per week"]
+      ];
+
+      checks.forEach((check, index) => {
+        const row = sheet.getRow(index + 4);
+        [check[0], check[1], check[2], check[3], check[4], index === 0 ? { text: "League bylaws", hyperlink: SOURCE_URL } : ""].forEach((value, column) => row.getCell(column + 1).value = value);
+        row.height = 23;
+        row.getCell(4).font = { bold: true, color: { argb: check[3] === "PASS" ? "FF006100" : "FF9C0006" } };
+        row.getCell(4).fill = { type: "pattern", pattern: "solid", fgColor: { argb: check[3] === "PASS" ? "FFC6EFCE" : "FFFFC7CE" } };
+      });
+
+      const standingsStart = checks.length + 6;
+      const standingsHeader = sheet.getRow(standingsStart);
+      ["Division", `${standingsState.yearLabel} Place`, "Team", "Extra Same-Place Opponent"].forEach((value, index) => standingsHeader.getCell(index + 1).value = value);
+      applyExcelHeader(standingsHeader, "FF548235");
+      ["Xavier", "Ignatius"].forEach(division => {
+        standingsState[division].forEach((team, index) => {
+          const otherDivision = division === "Xavier" ? "Ignatius" : "Xavier";
+          const row = sheet.addRow([division, index + 1, team, standingsState[otherDivision][index]]);
+          applyExcelTeamStyle(row.getCell(3), team);
+          applyExcelTeamStyle(row.getCell(4), standingsState[otherDivision][index]);
+        });
+      });
+
+      sheet.getColumn(1).width = 34;
+      sheet.getColumn(2).width = 13;
+      sheet.getColumn(3).width = 13;
+      sheet.getColumn(4).width = 13;
+      sheet.getColumn(5).width = 35;
+      sheet.getColumn(6).width = 22;
+      sheet.getColumn(6).font = { color: { argb: "FF0563C1" }, underline: true };
+      return sheet;
+    }
+
+    function buildScheduleWorkbook(scheduleObject) {
+      const workbook = new ExcelJS.Workbook();
+      addWorkbookMetadata(workbook, `${scheduleObject.label} Fantasy Football Schedule`);
+      addWeeklyWorksheet(workbook, scheduleObject);
+      addCalendarWorksheet(workbook, scheduleObject);
+      addRulesWorksheet(workbook, scheduleObject);
+      return workbook;
+    }
+
+    function addCombinedSummary(workbook) {
+      const sheet = workbook.addWorksheet("Comparison Summary", { views: [{ state: "frozen", ySplit: 4 }] });
+      sheet.mergeCells(1, 1, 1, 9);
+      sheet.getCell(1, 1).value = "SLUH ’22 Fantasy Football — Schedule Comparison Pack";
+      sheet.getCell(1, 1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF17365D" } };
+      sheet.getCell(1, 1).font = { bold: true, size: 16, color: { argb: "FFFFFFFF" } };
+      sheet.getCell(1, 1).alignment = { horizontal: "center" };
+      sheet.getRow(1).height = 28;
+      sheet.mergeCells(2, 1, 2, 9);
+      sheet.getCell(2, 1).value = "Each schedule is included on separate weekly and team-calendar sheets.";
+      sheet.getCell(2, 1).alignment = { horizontal: "center" };
+      sheet.getCell(2, 1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFD9EAF7" } };
+      sheet.addRow([]);
+      const header = sheet.addRow(["Schedule", "Seed", "Minimum Repeat Gap", "Max Cross-Division Streak", "Max Divisional Streak", "Exact Weeks vs. Schedule 1", "Similarity vs. Schedule 1", "Weekly Sheet", "Calendar Sheet"]);
+      applyExcelHeader(header);
+
+      const baseline = schedules[0];
+      schedules.forEach((scheduleObject, index) => {
+        const sameCells = teamWeekSimilarity(scheduleObject.data, baseline.data);
+        const row = sheet.addRow([
+          scheduleObject.label,
+          scheduleObject.seed,
+          scheduleObject.metrics.minRepeatGap,
+          scheduleObject.metrics.maxCrossDivisionStreak,
+          scheduleObject.metrics.maxDivisionalStreak,
+          exactWeeksInCommon(scheduleObject.data, baseline.data),
+          sameCells / 140,
+          { text: `Weekly S${index + 1}`, hyperlink: `#'Weekly S${index + 1}'!A1` },
+          { text: `Calendar S${index + 1}`, hyperlink: `#'Calendar S${index + 1}'!A1` }
+        ]);
+        row.getCell(7).numFmt = "0%";
+      });
+
+      sheet.getColumn(1).width = 18;
+      sheet.getColumn(2).width = 14;
+      sheet.getColumn(3).width = 22;
+      sheet.getColumn(4).width = 27;
+      sheet.getColumn(5).width = 23;
+      sheet.getColumn(6).width = 26;
+      sheet.getColumn(7).width = 24;
+      sheet.getColumn(8).width = 18;
+      sheet.getColumn(9).width = 18;
+    }
+
+    async function saveBuffer(buffer, filename, mimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") {
+      const blob = new Blob([buffer], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    }
+
+    function safeFilename(value) {
+      return value.replace(/[^a-z0-9-_]+/gi, "_").replace(/^_+|_+$/g, "");
+    }
+
+    async function downloadScheduleExcel(scheduleObject) {
+      try {
+        ensureExcelLibraries();
+        setLoading(true, `Building ${scheduleObject.label}…`);
+        const workbook = buildScheduleWorkbook(scheduleObject);
+        const buffer = await workbook.xlsx.writeBuffer();
+        await saveBuffer(buffer, `${safeFilename(scheduleObject.label)}_seed_${scheduleObject.seed}.xlsx`);
+        showToast(`${scheduleObject.label} downloaded.`);
+      } catch (error) {
+        console.error(error);
+        showToast(error.message || "Could not create the Excel file.", true);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    async function downloadCombinedWorkbook() {
+      if (!schedules.length) return;
+      try {
+        ensureExcelLibraries();
+        setLoading(true, "Building combined comparison workbook…");
+        const workbook = new ExcelJS.Workbook();
+        addWorkbookMetadata(workbook, "SLUH Fantasy Football Schedule Comparison Pack");
+        addCombinedSummary(workbook);
+        schedules.forEach((scheduleObject, index) => {
+          addWeeklyWorksheet(workbook, scheduleObject, `Weekly S${index + 1}`);
+          addCalendarWorksheet(workbook, scheduleObject, `Calendar S${index + 1}`);
+        });
+        const buffer = await workbook.xlsx.writeBuffer();
+        const baseSeed = document.getElementById("seedInput").value;
+        await saveBuffer(buffer, `SLUH_schedule_comparison_seed_${safeFilename(baseSeed)}.xlsx`);
+        showToast("Combined comparison workbook downloaded.");
+      } catch (error) {
+        console.error(error);
+        showToast(error.message || "Could not create the combined workbook.", true);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    async function downloadZip() {
+      if (!schedules.length) return;
+      try {
+        ensureExcelLibraries();
+        setLoading(true, "Building Excel schedule pack…");
+        const zip = new JSZip();
+        for (let index = 0; index < schedules.length; index += 1) {
+          const scheduleObject = schedules[index];
+          document.getElementById("loadingText").textContent = `Building ${scheduleObject.label} (${index + 1}/${schedules.length})…`;
+          const workbook = buildScheduleWorkbook(scheduleObject);
+          const buffer = await workbook.xlsx.writeBuffer();
+          zip.file(`${safeFilename(scheduleObject.label)}_seed_${scheduleObject.seed}.xlsx`, buffer);
+        }
+        const zipBlob = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
+        const url = URL.createObjectURL(zipBlob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `SLUH_schedule_pack_${schedules.length}_options.zip`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+        showToast("All schedule workbooks downloaded as a ZIP file.");
+      } catch (error) {
+        console.error(error);
+        showToast(error.message || "Could not create the ZIP file.", true);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    document.getElementById("editStandingsBtn").addEventListener("click", () => {
+      const panel = document.getElementById("standingsPanel");
+      panel.hidden = !panel.hidden;
+      document.getElementById("editStandingsBtn").textContent = panel.hidden ? "Edit prior standings" : "Hide standings editor";
+      if (!panel.hidden) {
+        renderStandingsEditor();
+        panel.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+    document.getElementById("resetStandingsBtn").addEventListener("click", () => {
+      renderStandingsEditor({
+        yearLabel: DEFAULT_STANDINGS.yearLabel,
+        Xavier: [...DEFAULT_STANDINGS.Xavier],
+        Ignatius: [...DEFAULT_STANDINGS.Ignatius]
+      });
+      showToast("The editor was reset to the 2025 standings. Click Apply & regenerate to save them.");
+    });
+    document.getElementById("applyStandingsBtn").addEventListener("click", applyStandingsAndRegenerate);
+    document.getElementById("generateBtn").addEventListener("click", generateScheduleSet);
+    document.getElementById("heroGenerateBtn").addEventListener("click", () => {
+      generateScheduleSet();
+      document.querySelector(".workspace").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    document.getElementById("randomSeedBtn").addEventListener("click", () => {
+      const seed = Math.floor(Math.random() * 4_000_000_000) + 1;
+      document.getElementById("seedInput").value = seed;
+      showToast(`Base seed changed to ${seed}.`);
+    });
+    document.getElementById("downloadActiveBtn").addEventListener("click", () => {
+      const schedule = activeSchedule();
+      if (schedule) downloadScheduleExcel(schedule);
+    });
+    document.getElementById("regenerateActiveBtn").addEventListener("click", replaceActiveSchedule);
+    document.getElementById("combinedDownloadBtn").addEventListener("click", downloadCombinedWorkbook);
+    document.getElementById("zipDownloadBtn").addEventListener("click", downloadZip);
+
+    document.querySelectorAll(".tab-btn").forEach(button => {
+      button.addEventListener("click", () => switchTab(button.dataset.tab));
+    });
+
+    renderStandingsEditor();
+    generateScheduleSet();
+  </script>
+</body>
+</html>
